@@ -1,0 +1,41 @@
+# 推荐 Python：3.10 / 3.11（Windows + CUDA 环境更省心）
+# 说明：Windows 上 faiss 建议用 conda 安装，例如：
+#   conda install -c conda-forge faiss-cpu
+
+# 基础工具
+numpy>=1.23,<2
+tqdm>=4.66
+loguru>=0.7
+
+# 检索 / 分词 / 传统特征
+jieba>=0.42.1
+nltk>=3.8
+scikit-learn>=1.3,<2
+scipy<2
+#faiss
+
+# Embedding / Rerank / LLM（本地模型）
+# torch 建议按你的 CUDA 版本单独安装
+#torchvision>=0.15
+transformers==4.48.3
+huggingface-hub>=0.25,<0.26
+accelerate>=0.26
+sentence-transformers>=2.6
+
+# 文档解析
+PyMuPDF>=1.23
+python-docx>=1.1
+python-pptx>=0.6.23
+markdown>=3.6
+beautifulsoup4>=4.12
+Pillow>=10.0
+
+# 在线 API（可选）
+openai>=1.0
+zhipuai>=2.0
+
+# 网页搜索
+serpapi>=0.1.5
+
+# LangChain 工具封装（用于 @tool 与 args_schema）
+langchain>=1.2,<2

@@ -1,0 +1,106 @@
+一条数据怎么被切分，建立索引，计算bm25/Embedding，入库，检索，拼接召回的？举个项目里的例子
+
+明白，你问的是“这套 RAG 里一条原始数据从文本变成可检索索引，再到检索时 BM25/向量怎么召回、怎么融合、怎么 rerank、最后怎么输出”的完整数据流。我就用你项目里已经存在的一个真实样本来走一遍：minfadian.txt 里的“第五百九十条 不可抗力”。
+
+原始数据进入系统时长什么样，以及怎么被识别成“法律文本”
+你把 minfadian.txt 这种 txt 交给摄取函数 __init__.py 里的 load_docs_for_build()。它读文本后会在 law_cn_civil_code.py 里调用 detect_cn_law_like() 判断是否像法律条文（核心依据是出现大量“第X条”）。如果像，就走 parse_cn_law_text()。
+
+法律文本怎么被解析成“按条”的 doc
+parse_cn_law_text() 会逐行扫描，遇到：
+
+“第X编/第X章/第X节”就更新当前 book/chapter/section
+“第X条”就把上一条 flush 掉，开启新条文缓冲
+直到下一条出现再 flush
+每次 flush 会生成一个 doc（注意，这里的 doc 还不是最终入库 chunk），结构是：
+
+id: make_doc_id(source_path, page=0, record_index=条序号) 的 sha1
+text: 该条的正文（通常包含条号行 + 后续段落）
+meta: 包含 law/book/chapter/section/article/record_index/doc_id/source_path/type 等定位字段
+以“第五百九十条”为例，它在你库里的条文级 doc 之后又会被切块，最终你现在数据库里对应的一个 chunk（你刚才检索出来的那条）实际长这样（来自你本机的 split_sentence.jsonl，我直接按你文件里匹配到的行举例）：
+id = 314c85d7eb920d77bf3538259e530473a1defb29-0
+meta.article = 第五百九十条
+minfadian.txt
+text 里包含该条的三段内容，并保留了换行。
+
+条文 doc 怎么被切分成可入库的 chunk
+切分发生在 chunking.py 的 chunk_doc_item()。
+对法律 doc，它主要做三件事：
+
+用 sentence_splitter.py 的 SentenceSplitter.split_text() 先按标点粗切成句子列表
+因为法条常见“（一）（二）…”枚举会被切碎，所以 chunking.py 里 _merge_law_sentences() 会把枚举项和引导句尽量合并进同一个 chunk（这就是你在 “第五百九十条” 里看到三段一起出现在同一个 chunk 的原因）
+每个 chunk 会补齐 chunk_id = make_chunk_id(doc_id, chunk_index)，并生成 index_text
+index_text 很关键，它不是给用户看的，是专门为了检索效果而构造的“索引增强文本”。对法律 chunk 来说，它由 chunking.py 里的 _law_index_prefix() 生成前缀，例如会把：
+《中华人民共和国民法典》、简称、第三编 合同、第八章 违约责任、未分节、第五百九十条
+这些定位信息拼到正文前面。这样 BM25 分词和向量 embedding 都能“看见”条位置信息，检索会更稳。
+
+你上面那条 chunk 的 index_text 就是这种结构：前面一行是定位信息，后面是正文。
+
+建库时 BM25 怎么算、怎么落盘
+建库入口在 searcher.py 的 Searcher.build_db(docs)。
+BM25 这一路是：
+
+BM25Retriever.build(docs)（bm25_retriever.py）
+对每个 doc/chunk 调用 tokenize(item)，它会优先取 item["index_text"]（而不是纯正文）然后 jieba.cut_for_search() 分词
+生成 tokenized_corpus 后，用 BM25Okapi(tokenized_corpus) 构建 BM25 模型
+落盘在 BM25Retriever.save_bm25_data()：写到 bm25_data.pkl。里面存了：
+
+data_list：原始 doc 列表（也就是你的 chunk dict 列表，含 meta/index_text）
+tokenized_corpus：分词后的语料
+以及 BM25 初始化所需的数据。
+建库时 Embedding/FAISS 怎么算、怎么落盘
+向量这一路在 Searcher.build_db() 里是批处理：
+HFSTEmbedding.get_embeddings(batch_texts)（hf_emb.py），底层用 SentenceTransformer.encode(..., normalize_embeddings=True) 得到归一化向量
+EmbRetriever.batch_insert(embs, docs)（emb_retriever.py）
+EmbIndex.batch_insert(embs) 把向量塞进 faiss 索引（emb_index.py，里面 import faiss）
+同步把 doc（chunk dict）append 到 forward_index
+落盘在 EmbRetriever.save()：
+
+invert_index.faiss：faiss 索引
+forward_index.txt：一行一个 json 的 chunk dict（你打开的 forward_index.txt 就是它）
+所以“入库”的本质就是两份索引文件 + 一份 BM25 pkl + 一份切分结果 split_sentence.jsonl，它们共同构成一个库目录。
+
+检索时 BM25/向量各自怎么召回
+检索入口你现在用的是 langchain_tools.py 的 rag_search()，它内部调用 Searcher.search_advanced()。
+Searcher.search_advanced() 会创建一个 SingleDBRecallProvider（single_db.py），然后调用 recall() 得到两份召回列表：
+
+BM25 召回：
+BM25Retriever.search(bm25_query, recall_k)
+返回 [(doc_idx, item, bm25_score), ...]，score 越大越相关
+向量召回：
+query_emb = HFSTEmbedding.get_embedding(emb_query_text)
+EmbRetriever.search(query_emb, recall_k)：faiss 返回 topk 的 index 和 distance
+返回 [(doc_idx, item, l2_distance), ...]，distance 越小越相关
+注意你当前工具里写死 bm25_query == emb_query_text == query，没有 HyDE，所以“不可抗力”这个词既驱动 BM25，也驱动向量检索。
+
+两路召回怎么“拼接/融合”成一份候选
+融合发生在 advanced.py 的 run_search_advanced()，里面会调用 _fuse_candidates()。
+你当前工具写死 fusion_method="rrf"，所以走 rrf.py 的 rrf_fuse()：
+
+BM25 列表先按 score 从高到低排序
+向量列表按 distance 从小到大排序
+对每个 item 计算 RRF 分数：weight * (1 / (k + rank))
+两路分数累加到同一个 score_map 上，实现“拼接但去重”的效果
+去重用的 key 是 common.py 的 item_key()：优先用 chunk 的 id，其次用 meta.doc_id，再退到 text。你现在 chunk 都有稳定的 id，所以融合很稳定。
+
+这一步的产物是一个 candidates 列表（还没 rerank）。
+
+rerank 怎么做，为什么最后结果顺序可能和 BM25/向量不一样
+rerank 在 reanker_bge_m3.py 的 RerankerBGEM3.rank()：
+组 pair：[query, candidate_text]
+candidate_text 依然优先取 index_text（含法条定位信息），其次取 text
+用 AutoModelForSequenceClassification 输出 logits，当作相关性分数
+按分数从高到低排序，取 top_n
+所以你最终看到“第五百九十条”“第一百八十条”“第五百六十三条”等排在前面，是三层共同作用的结果：
+
+法条本身含“不可抗力”关键词，BM25 强相关
+index_text 带定位语义，向量也更容易贴近
+reranker 进一步把“不可抗力”语境下更像定义/规则条文的段落排前
+最后输出给你看到的 “RAG Search Response” 是怎么拼出来的
+rag_search() 返回的是工具输出，不是大模型生成。它把 rerank 结果转成 items 列表，然后交给 observation.py 的 format_observation_for_llm()。
+当前实现是每条 item 输出两行：
+
+[i] + 压平换行后的证据文本
+source= + 根据 meta 格式化的来源定位（法律是 source_path | 法名 | 编 | 章 | 节 | 条）
+你这次看到的 [1] 第五百九十条 ... source=...第五百九十条，就是从 split_sentence.jsonl 那条 chunk 的 meta 直接格式化出来的，不存在“大模型胡说”这一环。
+
+如果你愿意，我可以继续用同一个例子，把“BM25 分词后具体有哪些 token”“向量召回返回的 doc_idx 对应 forward_index.txt 的哪一行”“RRF 融合时这条的 rank 是多少、融合分数怎么叠加”也用你现有库里的真实数据走一遍，但那就需要你告诉我你这次检索的 query 是什么，以及你想看的是 law 还是 case。

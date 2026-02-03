@@ -1,7 +1,7 @@
 .env
-eval
 models
 tiny-rag-advanced.txt
 __pycache__
 .tmp
 help.txt
+config
