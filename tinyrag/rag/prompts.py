@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 _DEFAULT_HYDE = (
-    "你是一名检索增强系统的查询改写器。\n"
-    "请根据用户问题，写一段“可能出现在知识库/百科/说明文中的答案段落”，用于向量检索召回相关资料。\n"
-    "要求：只输出正文，不要标题，不要编号，不要引用，不要出现“根据/可能/我认为”等措辞；"
-    "尽量包含关键实体、别名、时间、地点、定义、要点等信息；长度控制在 200~400 字。\n"
-    "用户问题：{question}\n"
-    "正文："
+    "你是法律条文检索的查询扩展器（HyDE）。\n"
+    "你的输出用于向量检索，不是最终回答。\n"
+    "只输出一行“检索短语”，长度 20~50 字。\n"
+    "必须原样保留用户问题里的至少2个关键短语（每个>=2个汉字），不要把信息改写成泛化问句。\n"
+    "在保留原信息的基础上，补充2~5个法学近义词/领域词（例如 责任/义务/构成要件/免责/赔偿/禁止/合同/侵权/刑事/行政 等）。\n"
+    "禁止编造事实、条号、机构名称、数字结论；禁止定义/解释/分点；不要输出问号。\n"
+    "输出示例（仅示例，不要照抄）：救助义务 及时施救 免责条件 侵权责任 过错\n"
 )
 
 _DEFAULT_RAG = (
@@ -29,5 +30,5 @@ def build_rag_prompt(*, context: str, question: str) -> str:
     )
 
 
-def build_hyde_prompt(question: str) -> str:
-    return _DEFAULT_HYDE.format(question=(question or "").strip())
+def build_hyde_prompt() -> str:
+    return _DEFAULT_HYDE.strip()

@@ -69,10 +69,12 @@ def rag_search(query: str, topk: int = 5, db_name: str = "law", is_hyde: bool = 
             torch_dtype=torch.bfloat16,  # 使用bfloat16减少内存
             device_map="auto",  # 自动分配设备
         )
-        hyde_prompt = build_hyde_prompt(question=q)
-        message = [{"role": "system", "content": hyde_prompt},{"role": "user", "content": ""}]
-        response = pipe(message, max_new_tokens=256, do_sample=False,temperature=0)
-        hyde_q = response[0]['generated_text'][-1]
+        hyde_prompt = build_hyde_prompt()
+        message = [{"role": "system", "content": hyde_prompt},{"role": "user", "content": f"用户问题：{q}"}]
+        response = pipe(message, max_new_tokens=256, do_sample=False)
+        hyde_raw = response[0]['generated_text'][-1]["content"]
+        # 防止 HyDE 丢失原问题信息：把原 query 与扩展短语拼在一起做向量检索
+        hyde_q = f"{q} {str(hyde_raw or '').strip()}".strip()
     else:
         hyde_q = q
 

@@ -37,13 +37,27 @@ class BM25Retriever:
         """
         #注：原项目 Tiny-rag 中对BM-25的分词仅仅使用了 jieba 分词，应该需要考虑停用词等优化手段。
         #后续可以考虑增加更多分词选项。
-        #待优化部分
+        #已优化
+
         if isinstance(item, dict):
             # 索引增强：优先使用 index_text（包含法名/编章节条等定位信息）
             text = item.get("index_text") or item.get("text") or ""
+            stop_flag = item.get("meta").get("type")=="pdf"
         else:
             text = str(item or "")
-        return list(jieba.cut_for_search(text))
+            stop_flag = False
+
+        result = list(jieba.cut_for_search(text))
+        if stop_flag:
+            #对于长文本case，应当考虑使用停用词进行优化，短文本law足够精炼，停词效果反而不好
+            stopwords = set()
+            with open("tinyrag/searcher/bm25_recall/stopwords_hit.txt", 'r', encoding='utf-8') as f:
+                for line in f:
+                    word = line.strip()
+                    if word:
+                        stopwords.add(word)
+            result = [word for word in result if word not in stopwords and len(word.strip()) > 0]
+        return result
 
     def save_bm25_data(self, db_name=""):
         """ 对数据进行分词并保存到文件中。

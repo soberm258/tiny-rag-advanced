@@ -1,0 +1,92 @@
+{
+  "source": "user_pasted_console_output",
+  "extracted_date": "2026-02-03",
+  "eval_jsonl": "eval/law_eval_set.jsonl",
+  "reports": [
+    {
+      "experiment": {
+        "name": "rrf_default",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "rrf",
+        "rrf_k": 60,
+        "bm25_weight": 1.0,
+        "emb_weight": 1.0,
+        "is_hyde": false
+      },
+      "metrics": {
+        "hit@k": 0.5775,
+        "mrr@k": 0.41341666666666665
+      },
+      "timing_sec": {
+        "encode_mean": 5.539999074244406e-07,
+        "search_mean": 2.701160203750051,
+        "total_mean": 2.701160757749958
+      }
+    },
+    {
+      "experiment": {
+        "name": "bm25_only",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "rrf",
+        "rrf_k": 60,
+        "bm25_weight": 1.0,
+        "emb_weight": 0.0,
+        "is_hyde": false
+      },
+      "metrics": {
+        "hit@k": 0.535,
+        "mrr@k": 0.376375
+      },
+      "timing_sec": {
+        "encode_mean": 5.66750004509231e-07,
+        "search_mean": 2.9401359637500444,
+        "total_mean": 2.940136530500049
+      }
+    },
+    {
+      "experiment": {
+        "name": "emb_only",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "rrf",
+        "rrf_k": 60,
+        "bm25_weight": 0.0,
+        "emb_weight": 1.0,
+        "is_hyde": false
+      },
+      "metrics": {
+        "hit@k": 0.57,
+        "mrr@k": 0.40791666666666665
+      },
+      "timing_sec": {
+        "encode_mean": 4.805000298802042e-07,
+        "search_mean": 2.1621731472500003,
+        "total_mean": 2.1621736277500303
+      }
+    },
+    {
+      "experiment": {
+        "name": "dedup_default",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "dedup",
+        "rrf_k": 60,
+        "bm25_weight": 1.0,
+        "emb_weight": 1.0,
+        "is_hyde": false
+      },
+      "metrics": {
+        "hit@k": 0.535,
+        "mrr@k": 0.376375
+      },
+      "timing_sec": {
+        "encode_mean": 5.167500694369664e-07,
+        "search_mean": 2.925127076250046,
+        "total_mean": 2.9251275930001155
+      }
+    }
+  ]
+}
+

@@ -99,11 +99,24 @@ class Searcher:
         recall_k = int(recall_k) if recall_k is not None else 2 * top_n
         recall_k = max(top_n, recall_k)
 
-        bm25_list: List[BM25RecallItem] = self.bm25_retriever.search(bm25_query, recall_k)
+        # import time
+        # time_start = time.perf_counter()
+        if bm25_weight > 0.0:
+            bm25_list: List[BM25RecallItem] = self.bm25_retriever.search(bm25_query, recall_k)
+        else:
+            bm25_list = []
+        # time_end = time.perf_counter()
+        # print("bm25 search time:", (time_end - time_start))
         logger.info("bm25 recall text num: {}", len(bm25_list))
 
         query_emb = self.emb_model.get_embedding(emb_query_text)
-        emb_list: List[EmbRecallItem] = self.emb_retriever.search(query_emb, recall_k)
+        # time_start = time.perf_counter()
+        if emb_weight > 0.0:
+            emb_list: List[EmbRecallItem] = self.emb_retriever.search(query_emb, recall_k)
+        else:
+            emb_list = []
+        # time_end = time.perf_counter()
+        # print("emb search time:", (time_end - time_start))
         logger.info("emb recall text num: {}", len(emb_list))
 
         candidates = fuse_candidates(

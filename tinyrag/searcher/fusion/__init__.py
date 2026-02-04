@@ -40,4 +40,7 @@ def fuse_candidates(
             bm25_weight=bm25_weight,
             emb_weight=emb_weight,
         )
-    return dedup_fuse(bm25_list, emb_list, top_k=recall_k)
+    elif method == "dedup":
+        return dedup_fuse(bm25_list, emb_list, top_k=recall_k)
+    else:
+        raise ValueError(f"不支持的融合方法：{method}")

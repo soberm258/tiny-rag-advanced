@@ -54,7 +54,7 @@ def build_db(*, db_name: str, input_path: str, min_chunk_len: int = 20, sentence
 
 
 def search_db(*, db_name: str, query: str, topk: int,
-              is_hyde:bool=False,bm25_weight: float=1.0, emb_weight: float=1.0
+              is_hyde:bool=False,bm25_weight: float=1.0, emb_weight: float=1.0, fusion_method: str="rrf"
               ) -> None:
     base_dir = os.path.join(_DB_ROOT_DIR, db_name)
     searcher = Searcher(
@@ -74,10 +74,12 @@ def search_db(*, db_name: str, query: str, topk: int,
             torch_dtype=torch.bfloat16,  # 使用bfloat16减少内存
             device_map="auto",  # 自动分配设备
         )
-        hyde_prompt = build_hyde_prompt(question=query)
-        message = [{"role": "system", "content": hyde_prompt},{"role": "user", "content": ""}]
-        response = pipe(message, max_new_tokens=256, do_sample=False,temperature=0)
-        hyde_q = response[0]['generated_text'][-1]
+        hyde_prompt = build_hyde_prompt()
+        message = [{"role": "system", "content": hyde_prompt},{"role": "user", "content": f"用户问题：{query}"}]
+        response = pipe(message, max_new_tokens=256, do_sample=False)
+        hyde_raw = response[0]['generated_text'][-1]["content"]
+        # 防止 HyDE 丢失原问题信息：把原 query 与扩展短语拼在一起做向量检索
+        hyde_q = f"{query} {str(hyde_raw or '').strip()}".strip()
     else:
         hyde_q = query
     reranked = searcher.search_advanced(
@@ -86,7 +88,7 @@ def search_db(*, db_name: str, query: str, topk: int,
         emb_query_text=hyde_q,
         top_n=topk,
         recall_k=max(1, topk * 4),
-        fusion_method="rrf",
+        fusion_method=fusion_method,
         rrf_k=60,
         bm25_weight=bm25_weight,
         emb_weight=emb_weight,
@@ -127,6 +129,7 @@ def main() -> None:
     p_search.add_argument("--is_hyde", action='store_true', default=False, help="是否使用 HyDE 生成假设查询")
     p_search.add_argument("--bm25-weight", type=float, default=1.0, help="BM25 权重")
     p_search.add_argument("--emb-weight", type=float, default=1.0, help="向量相似度权重")
+    p_search.add_argument("--fusion-method", type=str, default="rrf", help="融合方法，默认 rrf")
 
 
     args = parser.parse_args()
@@ -143,9 +146,9 @@ def main() -> None:
         此接口留给eval快速检验用
         """
         search_db(db_name=str(args.db_name).strip(), query=str(args.query).strip(), topk=int(args.topk)
-                  ,is_hyde=bool(args.is_hyde), bm25_weight=float(args.bm25_weight), emb_weight=float(args.emb_weight))
+                  ,is_hyde=bool(args.is_hyde), bm25_weight=float(args.bm25_weight), emb_weight=float(args.emb_weight),
+                    fusion_method=str(args.fusion_method))
 
 
 if __name__ == "__main__":
     main()
-

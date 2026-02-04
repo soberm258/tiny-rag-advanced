@@ -1,0 +1,180 @@
+{
+  "eval_jsonl": "eval/law_eval_set_low.jsonl",
+  "db_dir": "data\\db\\law",
+  "reports": [
+    {
+      "experiment": {
+        "name": "bm25_only",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "rrf",
+        "rrf_k": 60,
+        "bm25_weight": 1.0,
+        "emb_weight": 0.0,
+        "is_hyde": false
+      },
+      "n_samples": 30,
+      "metrics": {
+        "hit@k": 0.36666666666666664,
+        "mrr@k": 0.3277777777777778
+      },
+      "timing_sec": {
+        "hyde_mean": 0.0,
+        "search_mean": 2.6744081333328116,
+        "total_mean": 2.674409100000048
+      },
+      "by_tag": {
+        "semantic": {
+          "hit@k": 0.36666666666666664,
+          "mrr@k": 0.3277777777777778,
+          "n": 30
+        }
+      }
+    },
+    {
+      "experiment": {
+        "name": "emb_only",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "rrf",
+        "rrf_k": 60,
+        "bm25_weight": 0.0,
+        "emb_weight": 1.0,
+        "is_hyde": false
+      },
+      "n_samples": 30,
+      "metrics": {
+        "hit@k": 0.7666666666666667,
+        "mrr@k": 0.5666666666666667
+      },
+      "timing_sec": {
+        "hyde_mean": 0.0,
+        "search_mean": 2.0750092800012983,
+        "total_mean": 2.075010083332988
+      },
+      "by_tag": {
+        "semantic": {
+          "hit@k": 0.7666666666666667,
+          "mrr@k": 0.5666666666666667,
+          "n": 30
+        }
+      }
+    },
+    {
+      "experiment": {
+        "name": "hyde_emb_only",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "rrf",
+        "rrf_k": 60,
+        "bm25_weight": 0.0,
+        "emb_weight": 1.0,
+        "is_hyde": true
+      },
+      "n_samples": 30,
+      "metrics": {
+        "hit@k": 0.8,
+        "mrr@k": 0.5883333333333334
+      },
+      "timing_sec": {
+        "hyde_mean": 0.9667506266666653,
+        "search_mean": 2.1567246366651185,
+        "total_mean": 3.1234784133324864
+      },
+      "by_tag": {
+        "semantic": {
+          "hit@k": 0.8,
+          "mrr@k": 0.5883333333333334,
+          "n": 30
+        }
+      }
+    },
+    {
+      "experiment": {
+        "name": "dedup_default",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "dedup",
+        "rrf_k": 60,
+        "bm25_weight": 1.0,
+        "emb_weight": 1.0,
+        "is_hyde": false
+      },
+      "n_samples": 30,
+      "metrics": {
+        "hit@k": 0.36666666666666664,
+        "mrr@k": 0.3277777777777778
+      },
+      "timing_sec": {
+        "hyde_mean": 0.0,
+        "search_mean": 2.67148598000058,
+        "total_mean": 2.6714868266659324
+      },
+      "by_tag": {
+        "semantic": {
+          "hit@k": 0.36666666666666664,
+          "mrr@k": 0.3277777777777778,
+          "n": 30
+        }
+      }
+    },
+    {
+      "experiment": {
+        "name": "rrf_default",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "rrf",
+        "rrf_k": 60,
+        "bm25_weight": 1.0,
+        "emb_weight": 1.0,
+        "is_hyde": false
+      },
+      "n_samples": 30,
+      "metrics": {
+        "hit@k": 0.7666666666666667,
+        "mrr@k": 0.5611111111111111
+      },
+      "timing_sec": {
+        "hyde_mean": 0.0,
+        "search_mean": 2.521234233333962,
+        "total_mean": 2.5212351400002566
+      },
+      "by_tag": {
+        "semantic": {
+          "hit@k": 0.7666666666666667,
+          "mrr@k": 0.5611111111111111,
+          "n": 30
+        }
+      }
+    },
+    {
+      "experiment": {
+        "name": "hyde_rrf_default",
+        "topk": 5,
+        "recall_factor": 4,
+        "fusion_method": "rrf",
+        "rrf_k": 60,
+        "bm25_weight": 1.0,
+        "emb_weight": 1.0,
+        "is_hyde": true
+      },
+      "n_samples": 30,
+      "metrics": {
+        "hit@k": 0.7666666666666667,
+        "mrr@k": 0.5583333333333333
+      },
+      "timing_sec": {
+        "hyde_mean": 0.7779473333328497,
+        "search_mean": 2.4480543400005748,
+        "total_mean": 3.226004926666792
+      },
+      "by_tag": {
+        "semantic": {
+          "hit@k": 0.7666666666666667,
+          "mrr@k": 0.5583333333333333,
+          "n": 30
+        }
+      }
+    }
+  ]
+}
