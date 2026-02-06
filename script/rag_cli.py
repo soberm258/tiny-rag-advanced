@@ -1,5 +1,8 @@
 import sys
 
+from dotenv import load_dotenv
+import torch
+
 sys.path.append(".")
 
 import argparse
@@ -16,7 +19,7 @@ from tinyrag.utils import write_list_to_jsonl
 _DB_ROOT_DIR = os.path.join("data", "db")
 _EMB_MODEL_ID = os.path.join("models", "bge-base-zh-v1.5")
 _RERANK_MODEL_ID = os.path.join("models", "bge-reranker-base")
-_DEVICE = os.getenv("TINYRAG_DEVICE", "cpu")
+_DEVICE = os.getenv("TINYRAG_DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
 
 
 def _ensure_db_dir(db_name: str) -> str:
@@ -112,6 +115,7 @@ def search_db(*, db_name: str, query: str, topk: int,
 
 
 def main() -> None:
+    load_dotenv()
     parser = argparse.ArgumentParser(description="最小 RAG CLI（建库/检索；不含 agent）")
     sub = parser.add_subparsers(dest="cmd", required=True)
 

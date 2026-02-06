@@ -23,7 +23,7 @@ def dedup_fuse(bm25_list: List[BM25RecallItem], emb_list: List[EmbRecallItem], *
         if len(out) >= top_k:
             return out
 
-    for _idx, item, _dist in sorted(emb_list, key=lambda x: x[2]):
+    for _idx, item, _sim in sorted(emb_list, key=lambda x: x[2], reverse=True):
         key = item_key(item)
         if key in seen:
             continue
@@ -33,4 +33,3 @@ def dedup_fuse(bm25_list: List[BM25RecallItem], emb_list: List[EmbRecallItem], *
             return out
 
     return out
-

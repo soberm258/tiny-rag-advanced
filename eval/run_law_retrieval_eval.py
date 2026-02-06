@@ -10,6 +10,8 @@ from functools import lru_cache
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+import torch
+
 from eval.law_eval_schema import LawEvalSample
 
 
@@ -279,7 +281,7 @@ def main() -> None:
     parser.add_argument("--db-dir", type=str, default=os.path.join("data", "db", "law"), help="数据库目录")
     parser.add_argument("--emb-model", type=str, default=os.path.join("models", "bge-base-zh-v1.5"))
     parser.add_argument("--rerank-model", type=str, default=os.path.join("models", "bge-reranker-base"))
-    parser.add_argument("--device", type=str, default=os.getenv("TINYRAG_DEVICE", "cpu"))
+    parser.add_argument("--device", type=str, default=os.getenv("TINYRAG_DEVICE", "cuda" if torch.cuda.is_available() else "cpu"))
     parser.add_argument("--exp-json", type=str, default="", help="实验配置 JSON（可选）")
     parser.add_argument("--out-json", type=str, default=os.path.join("eval", "law_eval_report.json"))
     parser.add_argument(

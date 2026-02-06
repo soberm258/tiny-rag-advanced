@@ -3,14 +3,14 @@ import numpy as np
 
 class EmbIndex:
     def __init__(self, index_dim: int) -> None:
-        description = "HNSW64"
-        measure = faiss.METRIC_L2
-        # self.index = faiss.index_factory(index_dim, description, measure)
-        self.index = faiss.IndexFlatL2(index_dim)
+        # 余弦相似度（Cosine）常用做法：先做 L2 归一化，再用内积（IP）检索。
+        # 这里用 IndexFlatIP，返回的是相似度（越大越相似）。
+        self.index = faiss.IndexFlatIP(index_dim)
     def insert(self, emb: list):
         emb = np.array(emb, dtype=np.float32)  # 转换为 NumPy 数组
         if emb.ndim == 1:
             emb = np.expand_dims(emb, axis=0)  # 转换为 (1, d) 形状
+        faiss.normalize_L2(emb)
         # print("Inserting emb: ", emb)
         # print("Inserting emb: ", emb.shape)
         self.index.add(emb)
@@ -24,6 +24,7 @@ class EmbIndex:
             embs = np.expand_dims(embs, axis=0)  # (d,) -> (1, d)
         if embs.size == 0:
             return
+        faiss.normalize_L2(embs)
         self.index.add(embs)
 
     def load(self, path: str):
@@ -36,4 +37,5 @@ class EmbIndex:
         vec = np.array(vec, dtype=np.float32)  # 转换为 NumPy 数组
         if vec.ndim == 1:
             vec = np.expand_dims(vec, axis=0)  # 转换为 (1, d) 形状
+        faiss.normalize_L2(vec)
         return self.index.search(vec, num)

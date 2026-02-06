@@ -1,7 +1,7 @@
 import os
 import json
 import time
-from typing import Any, List
+from typing import Any, List, Optional
 
 # from emb_index import EmbIndex
 from tinyrag.searcher.emb_recall.emb_index import EmbIndex
@@ -74,15 +74,27 @@ class EmbRetriever:
             pbar.close()
         print(f"向量前排索引加载完成，耗时 {time.time()-t1:.1f}s", flush=True)
 
-    def search(self, embs: list, top_n=5):
+    def search(self, embs: list, top_n=5, k_percent: Optional[float] = None):
         search_res = self.invert_index.search(embs, top_n)
         recall_list = []
         indices = search_res[1][0].tolist()
-        distances = search_res[0][0].tolist()
+        sims = search_res[0][0].tolist()
+
+        threshold: Optional[float] = None
+        if k_percent is not None and sims:
+            kp = float(k_percent)
+            if kp < 0.0:
+                kp = 0.0
+            if kp > 1.0:
+                kp = 1.0
+            threshold = max(sims) * kp
+
         for idx, doc_idx in enumerate(indices):
             if doc_idx is None or doc_idx < 0:
                 continue
             if doc_idx >= len(self.forward_index):
                 continue
-            recall_list.append((doc_idx, self.forward_index[doc_idx], distances[idx]))
+            if threshold is not None and sims[idx] < threshold:
+                continue
+            recall_list.append((doc_idx, self.forward_index[doc_idx], sims[idx]))
         return recall_list

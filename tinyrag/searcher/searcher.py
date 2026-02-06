@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+
 from typing import Any, List, Optional, Tuple
 
 from tinyrag.logging_utils import logger
@@ -8,6 +9,7 @@ from tqdm import tqdm
 
 from tinyrag.embedding.hf_emb import HFSTEmbedding
 from tinyrag.searcher.bm25_recall.bm25_retriever import BM25Retriever
+from tinyrag.searcher.bm25_recall.bm25_sqlite_retriever import BM25SQLiteRetriever
 from tinyrag.searcher.emb_recall.emb_retriever import EmbRetriever
 from tinyrag.searcher.reranker.reanker_bge_m3 import RerankerBGEM3
 from tinyrag.searcher.fusion import fuse_candidates
@@ -37,8 +39,15 @@ class Searcher:
         faiss_dir = os.path.join(self.base_dir, "faiss_idx")
 
         # 召回
-        self.bm25_retriever = BM25Retriever(base_dir=bm25_dir)
+        bm25_backend = os.getenv("TINYRAG_BM25_BACKEND", "sqlite").strip().lower()
+        sqlite_path = os.path.join(bm25_dir, "bm25.sqlite")
+        if bm25_backend == "sqlite" or (bm25_backend == "auto" and os.path.isfile(sqlite_path)):
+            self.bm25_retriever = BM25SQLiteRetriever(base_dir=bm25_dir)
+        elif bm25_backend == "former":
+            self.bm25_retriever = BM25Retriever(base_dir=bm25_dir)
         self.emb_model = HFSTEmbedding(path=emb_model_id, device=self.device)
+
+
         try:
             index_dim = self.emb_model.st_model.get_sentence_embedding_dimension()
         except Exception:
@@ -53,12 +62,11 @@ class Searcher:
     def build_db(self, docs: List[Any]) -> None:
         if not docs:
             raise ValueError("构建失败：docs 为空，无法构建 BM25/向量索引。")
-
         self.bm25_retriever.build(docs)
         logger.info("bm25 retriever build success...")
 
         device_lower = str(self.device).lower()
-        default_bs = "96" if "cuda" in device_lower else "16"
+        default_bs = "64" if "cuda" in device_lower else "16"
         batch_size = int(os.getenv("TINYRAG_EMB_BATCH_SIZE", default_bs))
         batch_size = max(1, batch_size)
 
@@ -94,29 +102,34 @@ class Searcher:
         rrf_k: int = 60,
         bm25_weight: float = 1.0,
         emb_weight: float = 1.0,
+        k_percent: Optional[float] = None,
     ) -> List[Tuple[float, Any]]:
         top_n = max(1, int(top_n))
         recall_k = int(recall_k) if recall_k is not None else 2 * top_n
         recall_k = max(top_n, recall_k)
 
-        # import time
-        # time_start = time.perf_counter()
+        import time 
         if bm25_weight > 0.0:
-            bm25_list: List[BM25RecallItem] = self.bm25_retriever.search(bm25_query, recall_k)
+            start_time = time.perf_counter()
+            bm25_list: List[BM25RecallItem] = self.bm25_retriever.search(bm25_query, recall_k,k_percent=k_percent)
+            end_time = time.perf_counter()
+            logger.info(f"BM25 search time: {end_time - start_time:.4f} seconds")
         else:
             bm25_list = []
-        # time_end = time.perf_counter()
-        # print("bm25 search time:", (time_end - time_start))
+        
         logger.info("bm25 recall text num: {}", len(bm25_list))
 
+        
         query_emb = self.emb_model.get_embedding(emb_query_text)
-        # time_start = time.perf_counter()
+        
         if emb_weight > 0.0:
-            emb_list: List[EmbRecallItem] = self.emb_retriever.search(query_emb, recall_k)
+            start_time = time.perf_counter()
+            emb_list: List[EmbRecallItem] = self.emb_retriever.search(query_emb, recall_k, k_percent=k_percent)
+            end_time = time.perf_counter()
+            logger.info(f"Emb search time: {end_time - start_time:.4f} seconds")
         else:
             emb_list = []
-        # time_end = time.perf_counter()
-        # print("emb search time:", (time_end - time_start))
+        
         logger.info("emb recall text num: {}", len(emb_list))
 
         candidates = fuse_candidates(
@@ -129,4 +142,7 @@ class Searcher:
             emb_weight=emb_weight,
         )
         logger.info("fusion candidate text num: {}", len(candidates))
-        return self.ranker.rank(rerank_query, candidates, top_n)
+
+        out = self.ranker.rank(rerank_query, candidates, top_n)
+
+        return out

@@ -1,5 +1,5 @@
 {
-  "eval_jsonl": "eval/law_eval_set_low.jsonl",
+  "eval_jsonl": "eval\\law_eval_set_low.jsonl",
   "db_dir": "data\\db\\law",
   "reports": [
     {
@@ -20,8 +20,8 @@
       },
       "timing_sec": {
         "hyde_mean": 0.0,
-        "search_mean": 2.6744081333328116,
-        "total_mean": 2.674409100000048
+        "search_mean": 0.1897574933313687,
+        "total_mean": 0.18975844333229663
       },
       "by_tag": {
         "semantic": {
@@ -49,8 +49,8 @@
       },
       "timing_sec": {
         "hyde_mean": 0.0,
-        "search_mean": 2.0750092800012983,
-        "total_mean": 2.075010083332988
+        "search_mean": 0.13928433666587808,
+        "total_mean": 0.1392849899988505
       },
       "by_tag": {
         "semantic": {
@@ -74,17 +74,17 @@
       "n_samples": 30,
       "metrics": {
         "hit@k": 0.8,
-        "mrr@k": 0.5883333333333334
+        "mrr@k": 0.59
       },
       "timing_sec": {
-        "hyde_mean": 0.9667506266666653,
-        "search_mean": 2.1567246366651185,
-        "total_mean": 3.1234784133324864
+        "hyde_mean": 0.8845490099983484,
+        "search_mean": 1.1449139366673384,
+        "total_mean": 2.0294662200021167
       },
       "by_tag": {
         "semantic": {
           "hit@k": 0.8,
-          "mrr@k": 0.5883333333333334,
+          "mrr@k": 0.59,
           "n": 30
         }
       }
@@ -107,8 +107,8 @@
       },
       "timing_sec": {
         "hyde_mean": 0.0,
-        "search_mean": 2.67148598000058,
-        "total_mean": 2.6714868266659324
+        "search_mean": 1.9877235366662112,
+        "total_mean": 1.9877244133317922
       },
       "by_tag": {
         "semantic": {
@@ -136,8 +136,8 @@
       },
       "timing_sec": {
         "hyde_mean": 0.0,
-        "search_mean": 2.521234233333962,
-        "total_mean": 2.5212351400002566
+        "search_mean": 1.7003849866678744,
+        "total_mean": 1.7003858433342733
       },
       "by_tag": {
         "semantic": {
@@ -161,12 +161,12 @@
       "n_samples": 30,
       "metrics": {
         "hit@k": 0.7666666666666667,
-        "mrr@k": 0.5583333333333333
+          "mrr@k": 0.5583333333333333
       },
       "timing_sec": {
-        "hyde_mean": 0.7779473333328497,
-        "search_mean": 2.4480543400005748,
-        "total_mean": 3.226004926666792
+        "hyde_mean": 0.611895169999237,
+        "search_mean": 1.6019909133314891,
+        "total_mean": 2.2138893933331323
       },
       "by_tag": {
         "semantic": {
