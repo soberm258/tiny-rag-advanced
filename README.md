@@ -29,9 +29,12 @@
 <a id=BM25公式></a>
 
 BM25公式：
+
+
 $$
 \mathrm{Score}(D,Q)=\sum_{i=1}^nIDF(q_i)\cdot\frac{f(q_i,D)\cdot(k_1+1)}{f(q_i,D)+k_1\cdot(1-b+b\cdot\frac{|D|}{\mathrm{avgdl}})}
 $$
+
 其中：
 - Score(D,Q) 是文档 D 与查询 Q 的相关性得分。
 - qi 是查询中的第 i 个词。
@@ -40,9 +43,13 @@ $$
 - |D| 是文档 D的长度。
 - avgdl是所有文档的平均长度。
 - k1 和 b 是可调的参数，通常 k1 在1.2到2之间， b通常设为0.75。
+
+
 $$
 IDF(q_i)=\log\left(\frac{N-n(q_i)+0.5}{n(q_i)+0.5}+1\right)
 $$
+
+
 - *N* 是文档集合中的文档总数
 - n(q1)是包含词q1的文档数量
 
