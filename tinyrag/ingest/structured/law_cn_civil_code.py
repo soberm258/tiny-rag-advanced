@@ -3,8 +3,6 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List
 
-from ...utils import make_doc_id
-
 
 _CN_NUM = r"一二三四五六七八九十百千零〇两0-9"
 _RE_BOOK = re.compile(rf"^\s*第([{_CN_NUM}]+)编\s*(.+)?\s*$")
@@ -93,7 +91,6 @@ def parse_cn_law_text(text: str, *, source_path: str) -> List[Dict[str, Any]]:
             cur_article = ""
             buf = []
             return
-        doc_id = make_doc_id(source_path=source_path, page=0, record_index=article_num)
         meta = {
             "source_path": source_path,
             "type": "txt",
@@ -103,9 +100,8 @@ def parse_cn_law_text(text: str, *, source_path: str) -> List[Dict[str, Any]]:
             "section": cur_section,
             "article": cur_article,
             "record_index": article_num,
-            "doc_id": doc_id,
         }
-        docs.append({"id": doc_id, "text": body, "meta": meta})
+        docs.append({"text": body, "meta": meta})
         cur_article = ""
         buf = []
 

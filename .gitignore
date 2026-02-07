@@ -7,3 +7,4 @@ config
 help.docx
 law_big
 law_huge
+.env

@@ -58,6 +58,8 @@ class BM25SQLiteRetriever:
             print("初始化数据库！")
         else:
             print("未初始化数据库，请加载数据库！ ")
+        # 触发 jieba 冷启动初始化，避免第一次 search 才付出代价
+        list(jieba.cut_for_search("热启动"))
 
     def _connect(self) -> sqlite3.Connection:
         if self._conn is not None:
@@ -122,7 +124,9 @@ class BM25SQLiteRetriever:
         doc_stats_rows: List[Tuple[int, int]] = []
 
         for doc_id, doc in tqdm(list(enumerate(txt_list)), desc="bm25(sqlite) build ", ascii=True):
+            #doc_id =  ids,doc = chunk
             tokens = self.tokenize(doc)
+            #tokenize 返回index_text/text 分词列表
             dl = int(len(tokens))
             total_dl += dl
 

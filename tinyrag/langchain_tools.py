@@ -132,27 +132,37 @@ def rag_search(query: str, topk: int = 5, db_name: str = "law", is_hyde: bool = 
 def __main__():
     # 示例调用
     load_dotenv()
-    tool_input = {
-        "query": "什么是合同法中的不可抗力？",
-        "topk": 5,
-        "db_name": "law",
-        "is_hyde": False,
-    }
-    response = rag_search.invoke(tool_input)
-    print("RAG Search Response:")
-    print(response)
+    while True:
+        user_query = input("请输入检索问题（输入exit退出）: ")
+        if user_query.lower() == "exit":
+            print("程序结束")
+            break
+        user_use_db_name = input("请输入数据库名称（law或case）: ")
+        user_topk = input("请输入返回条数（1~20，默认5）: ")
+        try:
+            user_topk_int = int(user_topk)
+        except ValueError:
+            user_topk_int = 5
     
-    tool_input = {
-        "query": "酒驾违法吗",
-        "topk": 5,
-        "db_name": "case",
-        "is_hyde": False,
-    }
-    response = rag_search.invoke(tool_input)
-    print("RAG Search Response:")
-    print(response)
-
-
+        tool_input = {
+            "query": user_query,
+            "topk": user_topk_int,
+            "db_name": user_use_db_name,
+            "is_hyde": False,
+        }
+        response = rag_search.invoke(tool_input)
+        print("RAG Search Response:")
+        print(response)
+    
+    # tool_input = {
+    #     "query": "酒驾违法吗",
+    #     "topk": 5,
+    #     "db_name": "case",
+    #     "is_hyde": False,
+    # }
+    # response = rag_search.invoke(tool_input)
+    # print("RAG Search Response:")
+    # print(response)
 
 if __name__ == "__main__":
     __main__()

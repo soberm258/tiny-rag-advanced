@@ -18,7 +18,11 @@ from tinyrag.searcher.types import BM25RecallItem, EmbRecallItem
 
 def _to_text(item: Any) -> str:
     if isinstance(item, dict):
-        # 索引增强：优先使用 index_text（包含法名/编章节条等定位信息）
+        meta = item.get("meta") or {}
+        if isinstance(meta, dict) and meta.get("pdf_mode") == "case":
+            # case：只用正文做 embedding（不使用 index_text）
+            return str(item.get("text") or "")
+        # law 等：优先使用 index_text（包含法名/编章节条等定位信息）
         return str(item.get("index_text") or item.get("text") or "")
     return str(item or "")
  
@@ -107,6 +111,14 @@ class Searcher:
         top_n = max(1, int(top_n))
         recall_k = int(recall_k) if recall_k is not None else 2 * top_n
         recall_k = max(top_n, recall_k)
+
+        if k_percent is not None:
+            k_percent = float(k_percent)
+            if k_percent <= 0.0 or k_percent > 1.0:
+                raise ValueError("k_percent must be in (0.0, 1.0]")
+        else:
+            k_percent = 0
+
 
         import time 
         if bm25_weight > 0.0:

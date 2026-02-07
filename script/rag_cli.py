@@ -57,7 +57,7 @@ def build_db(*, db_name: str, input_path: str, min_chunk_len: int = 20, sentence
 
 
 def search_db(*, db_name: str, query: str, topk: int,
-              is_hyde:bool=False,bm25_weight: float=1.0, emb_weight: float=1.0, fusion_method: str="rrf"
+              is_hyde:bool=False,bm25_weight: float=1.0, emb_weight: float=1.0, fusion_method: str="rrf", k_percent: float=0.8
               ) -> None:
     base_dir = os.path.join(_DB_ROOT_DIR, db_name)
     searcher = Searcher(
@@ -95,6 +95,7 @@ def search_db(*, db_name: str, query: str, topk: int,
         rrf_k=60,
         bm25_weight=bm25_weight,
         emb_weight=emb_weight,
+        k_percent=k_percent,
     )
     items: List[Dict[str, Any]] = []
     for i, (score, item) in enumerate(reranked, start=1):
@@ -134,6 +135,7 @@ def main() -> None:
     p_search.add_argument("--bm25-weight", type=float, default=1.0, help="BM25 权重")
     p_search.add_argument("--emb-weight", type=float, default=1.0, help="向量相似度权重")
     p_search.add_argument("--fusion-method", type=str, default="rrf", help="融合方法，默认 rrf")
+    p_search.add_argument("--k-percent", type=float, default=0.8, help="候选集比例截断")
 
 
     args = parser.parse_args()
@@ -151,7 +153,7 @@ def main() -> None:
         """
         search_db(db_name=str(args.db_name).strip(), query=str(args.query).strip(), topk=int(args.topk)
                   ,is_hyde=bool(args.is_hyde), bm25_weight=float(args.bm25_weight), emb_weight=float(args.emb_weight),
-                    fusion_method=str(args.fusion_method))
+                    fusion_method=str(args.fusion_method), k_percent=float(args.k_percent))
 
 
 if __name__ == "__main__":

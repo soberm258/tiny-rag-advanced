@@ -108,6 +108,8 @@ def _chunk_case_pdf_doc(
     min_chunk_len: int,
 ) -> List[Dict[str, Any]]:
     base_meta = dict(meta or {})
+    # 案例 PDF 的正文不在 doc.text，而在 ingest 阶段解析出的 meta.case_paragraphs 里。
+    # 这里把段落列表 pop 出来，后续只在本函数内使用，避免把大量段落数据继续向下游传递。
     paragraphs = base_meta.pop("case_paragraphs", None) or []
     case_title = str(base_meta.get("case_title") or "").strip()
 
@@ -118,8 +120,8 @@ def _chunk_case_pdf_doc(
         embed_sections_set = set(_CASE_DEFAULT_EMBED_SECTIONS)
 
     # 生成“文本单元”：默认以段落为单位；若段落过长，则使用 splitter 切句后再打包
-    max_chars = int(base_meta.get("case_chunk_max_chars") or 1200)
-    max_chars = max(200, max_chars)
+    max_chars = int(base_meta.get("case_chunk_max_chars") or 1024)
+    max_chars = max(256, max_chars)
     overlap_units = int(base_meta.get("case_chunk_overlap_units") or 1)
     overlap_units = max(0, overlap_units)
 
@@ -129,6 +131,7 @@ def _chunk_case_pdf_doc(
             continue
         section = str(p.get("section") or "").strip()
         if section and section not in embed_sections_set:
+            # 只对选定章节做入库（默认：基本案情/裁判理由），避免把“关联索引/关键词”等噪声也嵌入
             continue
         text = str(p.get("text") or "").strip()
         if not text:
@@ -205,12 +208,6 @@ def _chunk_case_pdf_doc(
             chunk_id = make_chunk_id(doc_id=doc_id, chunk_index=chunk_index)
             chunk: Dict[str, Any] = {"id": chunk_id, "text": chunk_text, "meta": out_meta}
 
-            if case_title:
-                # 索引增强：标题 + 分节名（若有）+ 正文
-                sec = uniq_sections[0] if len(uniq_sections) == 1 else "案例"
-                prefix = f"{case_title} [{sec}]".strip()
-                chunk["index_text"] = (prefix + "\n" + chunk_text).strip()
-
             out.append(chunk)
             chunk_index += 1
 
@@ -232,7 +229,7 @@ def chunk_doc_item(
     if isinstance(doc_item, dict):
         text = (doc_item.get("text") or "").strip()
         meta = doc_item.get("meta") or {}
-        doc_id = str(doc_item.get("id") or meta.get("doc_id") or "")
+        doc_id = str(meta.get("doc_id") or "")
         source_path = meta.get("source_path", "")
         page = int(meta.get("page") or 0)
         if not doc_id:

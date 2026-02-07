@@ -164,6 +164,7 @@ def eval_one_experiment(
             rrf_k=int(exp.rrf_k),
             bm25_weight=float(exp.bm25_weight),
             emb_weight=float(exp.emb_weight),
+            k_percent=None,
         )
         t2 = time.perf_counter()
 

@@ -28,7 +28,7 @@ def load_docs_for_build(
     """
     将输入（文件或目录）读取为 build 可用的文档列表。
     返回值为 List[doc]，每个元素是：
-      {"id": str, "text": str, "meta": {...}}
+      {"text": str, "meta": {...}}
     其中 meta 至少包含 source_path，PDF 还会包含 page；法律条文会包含 book/chapter/section/article 等定位字段。
     """
     input_path = Path(str(input_path))
@@ -83,18 +83,23 @@ def load_docs_for_build(
                         "case_degraded": bool(parsed.get("degraded")),
                         # 默认只嵌入关键章节：可在调用方覆盖
                         "case_embed_sections": ["基本案情", "裁判理由"],
+                        # 结构化段落列表：每条包含 section/page/para_index/text
+                        # 后续切块不会直接用当前 doc 的 text，而是从这里按章节挑段落再打包成 chunk
                         "case_paragraphs": list(parsed.get("paragraphs") or []),
                     }
                     doc_id = make_doc_id(source_path=str(file_path), page=0, record_index=0)
                     meta["doc_id"] = doc_id
-                    docs.append({"id": doc_id, "text": meta["case_title"] or doc_id, "meta": meta})
+                    # 这里的 doc 是“容器/占位”：对案例库 PDF，真正入库的是 chunking 阶段从 case_paragraphs 聚合出来的 chunk。
+                    # 因此 text 只用于保证非空与便于调试（标题比 doc_id 更可读）。
+                    docs.append({"text": meta["case_title"] or doc_id, "meta": meta})
                 else:
                     pages = read_pdf_pages(file_path)
                     for idx, t in enumerate(pages, start=1):
                         meta = {"source_path": str(file_path), "page": idx, "type": "pdf"}
                         doc_id = make_doc_id(source_path=str(file_path), page=idx, record_index=0)
                         meta["doc_id"] = doc_id
-                        docs.append({"id": doc_id, "text": t, "meta": meta})
+                        # 普通 PDF 模式：每页作为一个 doc，后续会再切句/切块。
+                        docs.append({"text": t, "meta": meta})
 
             elif suffix == "txt":
                 text = read_text_file(file_path)
@@ -106,12 +111,22 @@ def load_docs_for_build(
                     mode = "auto"
 
                 if mode in ("law", "auto") and detect_cn_law_like(text):
-                    docs.extend(parse_cn_law_text(text, source_path=str(file_path)))
+                    parsed = parse_cn_law_text(text, source_path=str(file_path))
+                    for d in parsed:
+                        meta = d.get("meta") or {}
+                        if isinstance(meta, dict):
+                            meta["doc_id"] = make_doc_id(
+                                source_path=str(file_path),
+                                page=0,
+                                record_index=int(meta.get("record_index") or 0),
+                            )
+                            d["meta"] = meta
+                    docs.extend(parsed)
                 else:
                     meta = {"source_path": str(file_path), "type": "txt"}
                     doc_id = make_doc_id(source_path=str(file_path), page=0, record_index=0)
                     meta["doc_id"] = doc_id
-                    docs.append({"id": doc_id, "text": text, "meta": meta})
+                    docs.append({"text": text, "meta": meta})
 
             elif suffix == "md":
                 text = read_md_file_to_text(file_path)
@@ -119,7 +134,7 @@ def load_docs_for_build(
                     meta = {"source_path": str(file_path), "type": "md"}
                     doc_id = make_doc_id(source_path=str(file_path), page=0, record_index=0)
                     meta["doc_id"] = doc_id
-                    docs.append({"id": doc_id, "text": text, "meta": meta})
+                    docs.append({"text": text, "meta": meta})
 
             elif suffix == "docx":
                 text = read_docx_to_text(file_path)
@@ -127,7 +142,7 @@ def load_docs_for_build(
                     meta = {"source_path": str(file_path), "type": "docx"}
                     doc_id = make_doc_id(source_path=str(file_path), page=0, record_index=0)
                     meta["doc_id"] = doc_id
-                    docs.append({"id": doc_id, "text": text, "meta": meta})
+                    docs.append({"text": text, "meta": meta})
 
             elif suffix == "pptx":
                 text = read_pptx_to_text(file_path)
@@ -135,7 +150,7 @@ def load_docs_for_build(
                     meta = {"source_path": str(file_path), "type": "pptx"}
                     doc_id = make_doc_id(source_path=str(file_path), page=0, record_index=0)
                     meta["doc_id"] = doc_id
-                    docs.append({"id": doc_id, "text": text, "meta": meta})
+                    docs.append({"text": text, "meta": meta})
 
             elif suffix in ("json", "jsonl"):
                 if suffix == "json":
@@ -152,7 +167,7 @@ def load_docs_for_build(
                     }
                     doc_id = make_doc_id(source_path=str(file_path), page=0, record_index=idx)
                     meta["doc_id"] = doc_id
-                    docs.append({"id": doc_id, "text": str(t), "meta": meta})
+                    docs.append({"text": str(t), "meta": meta})
 
             else:
                 logger.warning("不支持的文件类型，已跳过：{}", str(file_path))

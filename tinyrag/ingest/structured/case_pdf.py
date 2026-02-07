@@ -28,6 +28,9 @@ def _split_case_to_paragraphs(full_text: str) -> Tuple[str, List[Dict[str, Any]]
     - case_title：标题/案号行（取首段直到第一个分节标题之前）
     - paragraphs：按分节组织的段落列表，每条包含 section/page/text/para_index
     """
+    # 说明：
+    # - 上游会插入形如 <<<PAGE:3>>> 的页标记，这里用它给段落打 page。
+    # - headings 是案例库 PDF 常见分节标题；这里只做轻量规则切分，最终切块在 rag/chunking.py 完成。
     full_text = _RE_CASE_HEADING.sub(lambda m: "\n" + m.group(1) + "\n", full_text or "")
     lines = [ln.strip() for ln in (full_text or "").splitlines()]
     lines = [ln for ln in lines if ln]
@@ -40,7 +43,7 @@ def _split_case_to_paragraphs(full_text: str) -> Tuple[str, List[Dict[str, Any]]
             break
         if not _RE_CASE_PAGE_MARK.match(ln):
             title_lines.append(ln)
-    case_title = (title_lines[0] if title_lines else "").strip()
+    case_title = (title_lines[1] if title_lines else "").strip()
 
     paragraphs: List[Dict[str, Any]] = []
     current_section = ""
@@ -49,9 +52,11 @@ def _split_case_to_paragraphs(full_text: str) -> Tuple[str, List[Dict[str, Any]]
     for ln in lines:
         m = _RE_CASE_PAGE_MARK.match(ln)
         if m:
+            # 更新“当前页码”，后续段落沿用该页码直到下一次页标记出现
             current_page = int(m.group(1))
             continue
         if ln in headings:
+            # 更新“当前分节”，例如 基本案情/裁判理由 等；用于后续筛选嵌入章节
             current_section = ln.rstrip("：")
             continue
         para_index += 1
@@ -86,7 +91,7 @@ def read_case_pdf_paragraphs(
     watermark_chars: Optional[Tuple[str, ...]] = ("人", "民", "法", "院", "案", "例", "库"),
 ) -> Dict[str, Any]:
     """
-    读取“人民法院案例库”类 PDF，并做最小侵入的水印过滤与分节解析。
+    读取“人民法院案例库”类 PDF，并做水印过滤与分节解析。
 
     返回：
       {"case_title": str, "paragraphs": List[{para_index, section, page, text}]}
@@ -178,4 +183,3 @@ __all__ = [
     "read_case_pdf_paragraphs",
     "read_case_pdf_sections",
 ]
-
